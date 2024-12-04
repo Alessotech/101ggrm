@@ -193,6 +193,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                           const SizedBox(height: 16),
                           Row(
+
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Text('Already have an account?'),
