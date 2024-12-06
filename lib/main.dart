@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:stoc_one_2/sign_up.dart';
+import ' ActivationKey/Admin_Dashboard.dart';
 import 'Login.dart';
 import 'dash_b.dart';
 import 'firebase_options.dart';
@@ -12,7 +13,12 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
+  runApp( MaterialApp(
+
+    home:KeyDashboard() ,
+  )
+
+     );
 }
 
 class MyApp extends StatelessWidget {
@@ -21,6 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Stoc One',
       initialRoute: '/login', // Set the initial route
       routes: {
@@ -32,7 +39,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthCheck(),
+      home: KeyDashboard(),
     );
   }
 }

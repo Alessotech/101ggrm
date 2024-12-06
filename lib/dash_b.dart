@@ -7,6 +7,8 @@ import 'package:stoc_one_2/widget/service_name.dart';
 import 'package:stoc_one_2/widget/service_statues.dart';
 import 'package:stoc_one_2/widget/status_card.dart';
 
+import ' ActivationKey/ActivationKeyManager.dart';
+
 
 class pages1 extends StatefulWidget {
   const pages1({super.key});
@@ -16,6 +18,8 @@ class pages1 extends StatefulWidget {
 }
 
 class _pages1State extends State<pages1> {
+
+
 
   @override
   void initState() {
@@ -38,9 +42,23 @@ class _pages1State extends State<pages1> {
         backgroundColor: Colors.black,
         leading: Icon(Icons.download_for_offline_rounded),
         actions: [
+          IconButton(onPressed: () async {
+            final keyManager = ActivationKeyManager();
+
+// Generate a key
+            String key = await keyManager.generateActivationKey(type: 'standard');
+
+// Check key info
+            Map<String, dynamic>? info = await keyManager.getKeyInfo(key);
+          }, icon: Icon(Icons.generating_tokens)),
           // PopupMenuButton inside the AppBar
           PopupMenuButton<String>(
-            child: Icon(Icons.person),
+            child: Icon(Icons.person,
+            color: Colors.white,
+              size: 40,
+            ),
+            color: Colors.blue,
+            offset: Offset(-50, 2),
             onSelected: (value) {
               // Handle selection
               if (value == 'edit') {
