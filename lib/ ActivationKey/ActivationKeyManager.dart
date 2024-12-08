@@ -144,6 +144,10 @@ class ActivationKeyManager {
         .collection('activationKeys')
         .where('key', isEqualTo: key)
         .get();
+    final query = await firestore
+        .collection('activationKeys')
+        .where('key', isEqualTo: key)
+        .get();
     return querySnapshot.docs.isNotEmpty;
   }
 
@@ -169,6 +173,49 @@ class ActivationKeyManager {
       await querySnapshot.docs.first.reference.update({
         'isActive': false,
       });
+    }
+  }
+  /// Attempts to use an activation key for a download
+  /// Parameters:
+  /// - key: Activation key to use
+  /// - userId: ID of user attempting to use the key
+  /// Returns: true if successful, false if key invalid/expired/limit reached
+  Future<bool> useKey(String key, String userId) async {
+    try {
+      final querySnapshot = await firestore
+          .collection('activationKeys')
+          .where('key', isEqualTo: key)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return false;
+      }
+
+      final keyDoc = querySnapshot.docs.first;
+      final keyData = keyDoc.data();
+      final now = DateTime.now();
+
+      // Check if key is valid
+      if (!keyData['isActive'] ||
+          keyData['expiresAt'].toDate().isBefore(now) ||
+          (keyData['usedBy'] != null && keyData['usedBy'] != userId)) {
+        return false;
+      }
+
+      // Check download limits
+      if (keyData['downloadsUsed'] >= keyData['downloadLimit']) {
+        return false;
+      }
+
+      // Update key usage
+      await keyDoc.reference.update({
+        'downloadsUsed': FieldValue.increment(1),
+        'usedBy': userId,
+      });
+
+      return true;
+    } catch (e) {
+      throw Exception('Failed to use activation key: $e');
     }
   }
 
@@ -207,5 +254,80 @@ class ActivationKeyManager {
       return querySnapshot.docs.first.data();
     }
     return null;
+  }
+//check account if Activated or not
+  Future<Map<String, dynamic>> checkAccountActivation(String email) async {
+    try {
+      final querySnapshot = await firestore
+          .collection('activationKeys')
+          .where('usedBy', isEqualTo: email)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return {
+          'isActivated': false,
+          'keyInfo': null,
+        };
+      }
+
+      // Get the most recent active key for this email
+      final mostRecentKey = querySnapshot.docs
+          .map((doc) => doc.data())
+          .toList()
+        ..sort((a, b) => b['createdAt'].compareTo(a['createdAt']));
+
+      final keyData = mostRecentKey.first;
+      final now = DateTime.now();
+      final expiryDate = keyData['expiresAt'].toDate();
+
+      // Check if the key is still valid
+      final bool isValid = expiryDate.isAfter(now);
+
+      return {
+        'isActivated': isValid,
+        'keyInfo': {
+          'key': keyData['key'],
+          'type': keyData['type'],
+          'downloadLimit': keyData['downloadLimit'],
+          'downloadsUsed': keyData['downloadsUsed'],
+          'expiresAt': expiryDate,
+          'subscriptionMonths': keyData['subscriptionMonths'],
+          'isExpired': !isValid,
+        },
+      };
+    } catch (e) {
+      throw Exception('Failed to check account activation: $e');
+    }
+  }
+
+
+
+  //get susbscribe info expired, remaminig donwload,etc
+  Future<Map<String, dynamic>> getSubscriptionStatus(String email) async {
+    try {
+      final activationStatus = await checkAccountActivation(email);
+
+      if (!activationStatus['isActivated']) {
+        return {
+          'hasActiveSubscription': false,
+          'message': 'No active subscription found',
+        };
+      }
+
+      final keyInfo = activationStatus['keyInfo'];
+      final remainingDownloads = keyInfo['downloadLimit'] - keyInfo['downloadsUsed'];
+
+      return {
+        'hasActiveSubscription': true,
+        'remainingDownloads': remainingDownloads,
+        'subscriptionType': keyInfo['type'],
+        'expiresAt': keyInfo['expiresAt'],
+        'downloadLimit': keyInfo['downloadLimit'],
+        'downloadsUsed': keyInfo['downloadsUsed'],
+      };
+    } catch (e) {
+      throw Exception('Failed to get subscription status: $e');
+    }
   }
 }
