@@ -17,6 +17,7 @@ class KeyProperties {
 /// Manages activation keys for subscription-based downloads
 class ActivationKeyManager {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  bool isclickeddown=false;
 
   /// Predefined key types with their properties
   final Map<String, KeyProperties> keyTypes = {
@@ -330,4 +331,55 @@ class ActivationKeyManager {
       throw Exception('Failed to get subscription status: $e');
     }
   }
+  Future<Map<String, dynamic>> incrementDownload(String email) async {
+    try {
+      // Get current subscription status
+      final querySnapshot = await firestore
+          .collection('activationKeys')
+          .where('usedBy', isEqualTo: email)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return {
+          'success': false,
+          'message': 'No active subscription found',
+          'remainingDownloads': 0
+        };
+      }
+
+      final doc = querySnapshot.docs.first;
+      final data = doc.data();
+
+      // Check if download limit is reached
+      if (data['downloadsUsed'] >= data['downloadLimit']) {
+        return {
+          'success': false,
+          'message': 'Daily download limit reached',
+          'remainingDownloads': 0
+        };
+      }
+
+      // Increment download count
+      await doc.reference.update({
+        'downloadsUsed': FieldValue.increment(1)
+      });
+
+      // Calculate remaining downloads
+      final remainingDownloads = data['downloadLimit'] - (data['downloadsUsed'] + 1);
+
+      return {
+        'success': true,
+        'message': 'Download counted successfully',
+        'remainingDownloads': remainingDownloads
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error: $e',
+        'remainingDownloads': 0
+      };
+    }
+  }
+
 }

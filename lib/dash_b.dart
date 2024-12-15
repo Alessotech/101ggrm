@@ -1,12 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:stoc_one_2/Envato_API/API.dart';
 import 'package:stoc_one_2/profile_page.dart';
 import 'package:stoc_one_2/widget/activation_Key_widget.dart';
 import 'package:stoc_one_2/widget/download_file_sec.dart';
+import 'package:stoc_one_2/widget/download_info_card.dart';
 import 'package:stoc_one_2/widget/service_name.dart';
 import 'package:stoc_one_2/widget/service_statues.dart';
 import 'package:stoc_one_2/widget/status_card.dart';
+import 'package:stoc_one_2/widget/subs_info_date.dart';
 
 import ' ActivationKey/ActivationKeyManager.dart';
 
@@ -18,6 +21,7 @@ class pages1 extends StatefulWidget {
 }
 
 class _pages1State extends State<pages1> {
+  final GlobalKey<SubscriptionDownloadCardState> cardKey = GlobalKey();
   String? userId = FirebaseAuth.instance.currentUser?.email;
   final activationManager = ActivationKeyManager();
   bool IsAlreadyActivated = false;
@@ -35,6 +39,7 @@ class _pages1State extends State<pages1> {
 
   @override
   void initState() {
+    //APi('https://elements.envato.com/stamp-in-retro-style-on-paper-mockup-template-92H7DVA');
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user == null) {
         print('User is currently signed out!');
@@ -64,13 +69,15 @@ class _pages1State extends State<pages1> {
             ),
             color: Colors.white,
             offset: const Offset(-50, -50),
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'edit') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ProfilePage()),
                 );
               } else if (value == 'logout') {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacementNamed(context, '/login');
                 //logout
               }
             },
@@ -156,12 +163,10 @@ class _pages1State extends State<pages1> {
                             : isTablet
                             ? (screenSize.width - 60) / 2
                             : screenSize.width - 32,
-                        child: const DownloadCard(
-                          icon: Icons.download,
-                          iconBackgroundColor: Colors.blueGrey,
-                          downloadLimit: "290/300 Daily Download Limit",
-                          todayDownload: "Today Download",
-                          progress: 0.96,
+                        child: SubscriptionDownloadCard(
+                          activationManager: activationManager,
+                          email: userId!,
+                          key: cardKey,
                         ),
                       ),
                       SizedBox(
@@ -171,12 +176,9 @@ class _pages1State extends State<pages1> {
                             : isTablet
                             ? (screenSize.width - 60) / 2
                             : screenSize.width - 32,
-                        child: const DownloadCard(
-                          icon: Icons.download,
-                          iconBackgroundColor: Colors.blueGrey,
-                          downloadLimit: "290/300 Daily Download Limit",
-                          todayDownload: "Today Download",
-                          progress: 0.96,
+                        child:SubscriptionStatusWidget(
+                          email:   userId!, // Use the user's email here
+                          activationKeyManager: activationManager,
                         ),
                       ),
                       FutureBuilder<Map<String, dynamic>>(
@@ -206,8 +208,13 @@ class _pages1State extends State<pages1> {
                 const SizedBox(height: 20),
                 // Download Widget with Tabs
                 Container(
+                  color: Colors.white,
                   width: double.infinity,
-                  child: const DownloadWidgetWithTabs(
+                  child: DownloadWidgetWithTabs(
+                    activationManager: activationManager,
+               userId: userId!,
+                    cardKey: cardKey,
+                    downUrl:"https://elements.envato.com/zeus-gym-fitness-elementor-template-kit-XDPAJ9N" ,
                     title: "Download File",
                     hint: "https://elements.envato.com/rastel-colorful-pop-art-powerpoint-template-TZSXSU2",
                   ),
