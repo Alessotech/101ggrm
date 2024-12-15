@@ -9,7 +9,6 @@ class DownloadWidgetWithTabs extends StatefulWidget {
   final String title;
   final String hint;
   final String? userId;
-  final String downUrl;
   final activationManager;
   final GlobalKey<SubscriptionDownloadCardState> cardKey;
 
@@ -20,7 +19,6 @@ class DownloadWidgetWithTabs extends StatefulWidget {
     required this.userId,
     required this.cardKey,
     required this.activationManager,
-    required this.downUrl,
   }) : super(key: key);
 
   @override
@@ -31,6 +29,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
     with SingleTickerProviderStateMixin {
   final GlobalKey<SubscriptionDownloadCardState> cardKey = GlobalKey();
   late TabController _tabController;
+ TextEditingController textEditingController=TextEditingController();
   String? downloadUrl;
   bool isLoading = false;
   int currentTabIndex=0;
@@ -60,24 +59,38 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
     });
 
     try {
-      // Increment download count and get URL
-      await widget.activationManager.incrementDownload(widget.userId!);
-      if(currentTabIndex==1){
-        final url = await getLicenceLink(widget.downUrl);
+      // First check subscription status before incrementing
+      final status = await widget.activationManager.incrementDownload(widget.userId!);
+
+      if (!status['success']) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(status['message'] ?? 'Cannot download at this time'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return; // Exit early if download limit reached
+      }
+
+      // Proceed with download only if increment was successful
+      if (currentTabIndex == 1) {
+        final url = await getLicenceLink(textEditingController.text.trim());
         setState(() {
           downloadUrl = url;
           isLoading = false;
         });
-      }else{
-        final url = await getDownloadLink(widget.downUrl);
+      } else {
+        final url = await getDownloadLink(textEditingController.text.trim());
         setState(() {
           downloadUrl = url;
           isLoading = false;
         });
       }
 
-
-      // Show bottom sheet with options
+      // Show bottom sheet with options only if we have a URL
       if (downloadUrl != null) {
         showModalBottomSheet(
           context: context,
@@ -87,10 +100,12 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
           builder: (context) => DownloadOptionsSheet(
             downloadUrl: downloadUrl!,
             onCopyToClipboard: () {
-              Clipboard.setData(ClipboardData(text: downloadUrl!));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('URL copied to clipboard')),
-              );
+              if (currentTabIndex != 1) {
+                Clipboard.setData(ClipboardData(text: downloadUrl!));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('URL copied to clipboard')),
+                );
+              }
               Navigator.pop(context);
             },
             onDirectDownload: () async {
@@ -112,7 +127,10 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
         isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -177,7 +195,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
                       unselectedLabelColor: Colors.grey,
                       indicatorColor: Colors.blue,
                       tabs: const [
-                        Tab(text: "Download"),
+                        Tab(text: "File"),
                         Tab(text: "License"),
                       ],
                     ),
@@ -191,6 +209,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
               children: [
                 Expanded(
                   child: TextField(
+                    controller: textEditingController,
                     decoration: InputDecoration(
                       hintText: widget.hint,
                       hintStyle: TextStyle(color: Colors.grey[600]),

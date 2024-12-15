@@ -185,7 +185,7 @@ class _KeyDashboardState extends State<KeyDashboard> {
         title: Text('Key Management'),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: Icon(Icons.download),
             onPressed: () => keyManager.resetDailyDownloads(),
           ),
         ],

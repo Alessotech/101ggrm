@@ -282,7 +282,7 @@ class ActivationKeyManager {
       final now = DateTime.now();
       final expiryDate = keyData['expiresAt'].toDate();
 
-      // Check if the key is still valid
+      // Check if the key is still valid based only on expiry date
       final bool isValid = expiryDate.isAfter(now);
 
       return {
@@ -318,6 +318,7 @@ class ActivationKeyManager {
 
       final keyInfo = activationStatus['keyInfo'];
       final remainingDownloads = keyInfo['downloadLimit'] - keyInfo['downloadsUsed'];
+      final bool hasReachedLimit = remainingDownloads <= 0;
 
       return {
         'hasActiveSubscription': true,
@@ -326,21 +327,19 @@ class ActivationKeyManager {
         'expiresAt': keyInfo['expiresAt'],
         'downloadLimit': keyInfo['downloadLimit'],
         'downloadsUsed': keyInfo['downloadsUsed'],
+        'limitReached': hasReachedLimit,
+        'message': hasReachedLimit ? 'Daily download limit reached' : 'Subscription active',
       };
     } catch (e) {
       throw Exception('Failed to get subscription status: $e');
     }
   }
+
   Future<Map<String, dynamic>> incrementDownload(String email) async {
     try {
-      // Get current subscription status
-      final querySnapshot = await firestore
-          .collection('activationKeys')
-          .where('usedBy', isEqualTo: email)
-          .where('isActive', isEqualTo: true)
-          .get();
+      final status = await getSubscriptionStatus(email);
 
-      if (querySnapshot.docs.isEmpty) {
+      if (!status['hasActiveSubscription']) {
         return {
           'success': false,
           'message': 'No active subscription found',
@@ -348,17 +347,23 @@ class ActivationKeyManager {
         };
       }
 
-      final doc = querySnapshot.docs.first;
-      final data = doc.data();
-
-      // Check if download limit is reached
-      if (data['downloadsUsed'] >= data['downloadLimit']) {
+      if (status['limitReached']) {
         return {
           'success': false,
           'message': 'Daily download limit reached',
-          'remainingDownloads': 0
+          'remainingDownloads': 0,
+          'hasActiveSubscription': true  // Added to indicate subscription is still active
         };
       }
+
+      // Get the active key document
+      final querySnapshot = await firestore
+          .collection('activationKeys')
+          .where('usedBy', isEqualTo: email)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final doc = querySnapshot.docs.first;
 
       // Increment download count
       await doc.reference.update({
@@ -366,12 +371,13 @@ class ActivationKeyManager {
       });
 
       // Calculate remaining downloads
-      final remainingDownloads = data['downloadLimit'] - (data['downloadsUsed'] + 1);
+      final remainingDownloads = status['downloadLimit'] - (status['downloadsUsed'] + 1);
 
       return {
         'success': true,
         'message': 'Download counted successfully',
-        'remainingDownloads': remainingDownloads
+        'remainingDownloads': remainingDownloads,
+        'hasActiveSubscription': true
       };
     } catch (e) {
       return {
