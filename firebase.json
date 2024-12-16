@@ -1,1 +1,30 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"stoc-one","appId":"1:918448528675:android:9880b3bfdb545157070096","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"stoc-one","configurations":{"android":"1:918448528675:android:9880b3bfdb545157070096","web":"1:918448528675:web:d6f9442d75bdfca0070096"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "stoc-one",
+          "appId": "1:918448528675:android:9880b3bfdb545157070096",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "stoc-one",
+          "configurations": {
+            "android": "1:918448528675:android:9880b3bfdb545157070096",
+            "web": "1:918448528675:web:d6f9442d75bdfca0070096"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
