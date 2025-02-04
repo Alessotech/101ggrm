@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'Login.dart';
+import 'dash_b.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
@@ -159,6 +160,17 @@ class _SignUpPageState extends State<SignUpPage> {
                                     email: _emailController.text ,
                                     password: _passwordController.text,
                                   );
+
+                                  if (mounted) {
+                                    // Navigate to home or next screen here
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Sign up Successful login with Same info'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                    Navigator.pushReplacementNamed(context, '/login');
+                                  }
                                 } on FirebaseAuthException catch (e) {
                                   if (e.code == 'weak-password') {
                                     print('The password provided is too weak.');
@@ -168,9 +180,11 @@ class _SignUpPageState extends State<SignUpPage> {
                                 } catch (e) {
                                   print(e);
                                 }
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Processing Sign Up...'),
+
                                   ),
                                 );
                               }

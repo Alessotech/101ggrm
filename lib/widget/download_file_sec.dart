@@ -2,13 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webdav_client/webdav_client.dart';
 import '../Envato_API/API.dart';
+import '../Envato_API/WebDAVRoot_API.dart';
+import '../Envato_API/powershellAPI.dart';
 import 'download_info_card.dart';
 
 class DownloadWidgetWithTabs extends StatefulWidget {
   final String title;
   final String hint;
   final String? userId;
+  final dynamic apiFunction; // API function with parameters
+  final String apiParams; // Additional parameters for the API call
   final activationManager;
   final GlobalKey<SubscriptionDownloadCardState> cardKey;
 
@@ -17,6 +22,8 @@ class DownloadWidgetWithTabs extends StatefulWidget {
     required this.title,
     required this.hint,
     required this.userId,
+    required this.apiFunction, // Function with parameters
+    required this.apiParams, // Extra parameters for API
     required this.cardKey,
     required this.activationManager,
   }) : super(key: key);
@@ -29,20 +36,20 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
     with SingleTickerProviderStateMixin {
   final GlobalKey<SubscriptionDownloadCardState> cardKey = GlobalKey();
   late TabController _tabController;
- TextEditingController textEditingController=TextEditingController();
-  String? downloadUrl;
+  TextEditingController textEditingController = TextEditingController();
   bool isLoading = false;
-  int currentTabIndex=0;
+  int currentTabIndex = 0;
+  String? url;
 
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {
         currentTabIndex = _tabController.index;
       });
-      print(currentTabIndex);
     });
   }
 
@@ -59,57 +66,67 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
     });
 
     try {
-      // First check subscription status before incrementing
-      final status = await widget.activationManager.incrementDownload(widget.userId!);
-
+      // Check subscription status before downloading
+      final status = await widget.activationManager.getSubscriptionStatus(widget.userId!);
       if (!status['success']) {
         setState(() {
           isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(status['message'] ?? 'Cannot download at this time'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(status['message'] ?? 'Cannot download at this time'), backgroundColor: Colors.red),
         );
-        return; // Exit early if download limit reached
+        return;
       }
 
-      // Proceed with download only if increment was successful
-      if (currentTabIndex == 1) {
-        final url = await getLicenceLink(textEditingController.text.trim());
-        setState(() {
-          downloadUrl = url;
-          isLoading = false;
-        });
+      // WebDAVAPI webDAV = WebDAVAPI(
+      //   baseUrl: 'https://stoc-one-api.online/WebDAVRoot',
+      //   username: 'webuser',
+      //   password: 'AlesoDev8\$',
+      // );
+
+      String inputUrl = textEditingController.text.trim();
+
+      // **Dynamically call API function based on parameters**
+      if (widget.apiParams.isEmpty) {
+        url = await widget.apiFunction(inputUrl);
       } else {
-        final url = await getDownloadLink(textEditingController.text.trim());
-        setState(() {
-          downloadUrl = url;
-          isLoading = false;
-        });
+        url = await widget.apiFunction(widget.apiParams, inputUrl);
+
       }
 
-      // Show bottom sheet with options only if we have a URL
-      if (downloadUrl != null) {
+
+        // String? downloadUrl = await webDAV.getDownloadLink("confetti-2023-11-27-05-19-34-utc.zip");
+        //
+        // if (downloadUrl != null) {
+        //   print("✅ File is available for download: $downloadUrl");
+        // } else {
+        //   print("❌ Error: File not found or inaccessible.");
+        // }
+
+
+      setState(() {
+        isLoading = false;
+      });
+
+      // Show download options if a valid URL exists
+      if (url != null && url!.isNotEmpty) {
+         widget.activationManager.incrementDownload(widget.userId!);
         showModalBottomSheet(
           context: context,
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
           builder: (context) => DownloadOptionsSheet(
-            downloadUrl: downloadUrl!,
+            downloadUrl: url!,
             onCopyToClipboard: () {
-              if (currentTabIndex != 1) {
-                Clipboard.setData(ClipboardData(text: downloadUrl!));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('URL copied to clipboard')),
-                );
-              }
+              Clipboard.setData(ClipboardData(text: url!));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('URL copied to clipboard')),
+              );
               Navigator.pop(context);
             },
             onDirectDownload: () async {
-              final uri = Uri.parse(downloadUrl!);
+              final uri = Uri.parse(url!);
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri);
               }
@@ -139,24 +156,23 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Bulk Download'),
+        title: const Text('Bulk Download'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Enter URLs (one per line)',
                 border: OutlineInputBorder(),
               ),
               maxLines: 5,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // Implement bulk download logic here
                 Navigator.pop(context);
               },
-              child: Text('Start Bulk Download'),
+              child: const Text('Start Bulk Download'),
             ),
           ],
         ),
@@ -180,7 +196,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
               children: [
                 Text(
                   widget.title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -204,7 +220,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
               ],
             ),
             const SizedBox(height: 16),
-            Divider(thickness: 0.3),
+            const Divider(thickness: 0.3),
             Row(
               children: [
                 Expanded(
@@ -223,7 +239,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.blue),
+                        borderSide: const BorderSide(color: Colors.blue),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -239,7 +255,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
                   color: Colors.black,
                   child: Center(
                     child: isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
@@ -249,7 +265,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
                     )
                         : IconButton(
                       onPressed: _handleDownloadOptions,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.download,
                         color: Colors.white,
                       ),
@@ -266,6 +282,7 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
   }
 }
 
+// Download Options Sheet
 class DownloadOptionsSheet extends StatelessWidget {
   final String downloadUrl;
   final VoidCallback onCopyToClipboard;
@@ -283,33 +300,15 @@ class DownloadOptionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'Download Options',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 16),
-          ListTile(
-            leading: Icon(Icons.copy),
-            title: Text('Copy to Clipboard'),
-            onTap: onCopyToClipboard,
-          ),
-          ListTile(
-            leading: Icon(Icons.download),
-            title: Text('Direct Download'),
-            onTap: onDirectDownload,
-          ),
-          ListTile(
-            leading: Icon(Icons.file_copy),
-            title: Text('Download More Files'),
-            onTap: onBulkDownload,
-          ),
+          const Text('Download Options', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          ListTile(leading: const Icon(Icons.copy), title: const Text('Copy to Clipboard'), onTap: onCopyToClipboard),
+          ListTile(leading: const Icon(Icons.download), title: const Text('Direct Download'), onTap: onDirectDownload),
+          ListTile(leading: const Icon(Icons.file_copy), title: const Text('Download More Files'), onTap: onBulkDownload),
         ],
       ),
     );

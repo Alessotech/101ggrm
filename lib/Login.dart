@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:stoc_one_2/sign_up.dart';
 
+import 'dash_b.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -348,7 +350,7 @@ class _LoginPageState extends State<LoginPage> {
                                   );
 
                                   // Navigate to home or next screen here
-                                   Navigator.pushReplacementNamed(context, '/home');
+                                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Pages1(),));
                                 }
 
                               } on FirebaseAuthException catch (e) {

@@ -15,7 +15,7 @@ Future<void> main() async {
 
   runApp( MaterialApp(
 
-    home:MyApp() ,
+    home:LoginPage() ,
   )
 
      );
@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginPage(),
         '/signup': (context) => SignUpPage(),
-        '/home': (context) => pages1(), // Add your home page route here
+        '/home': (context) => Pages1(), // Add your home page route here
       },
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
