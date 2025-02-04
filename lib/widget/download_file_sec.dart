@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webdav_client/webdav_client.dart';
 import '../Envato_API/API.dart';
 import '../Envato_API/WebDAVRoot_API.dart';
 import '../Envato_API/powershellAPI.dart';
@@ -12,8 +11,8 @@ class DownloadWidgetWithTabs extends StatefulWidget {
   final String title;
   final String hint;
   final String? userId;
-  final dynamic apiFunction; // API function with parameters
-  final String apiParams; // Additional parameters for the API call
+  final dynamic apiFunction;
+  final String apiParams;
   final activationManager;
   final GlobalKey<SubscriptionDownloadCardState> cardKey;
 
@@ -22,8 +21,8 @@ class DownloadWidgetWithTabs extends StatefulWidget {
     required this.title,
     required this.hint,
     required this.userId,
-    required this.apiFunction, // Function with parameters
-    required this.apiParams, // Extra parameters for API
+    required this.apiFunction,
+    required this.apiParams,
     required this.cardKey,
     required this.activationManager,
   }) : super(key: key);
@@ -66,8 +65,31 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
     });
 
     try {
-      // Check subscription status before downloading
-      final status = await widget.activationManager.getSubscriptionStatus(widget.userId!);
+      String inputUrl = textEditingController.text.trim();
+
+      // **Dynamically call API function based on parameters**
+      if (widget.apiParams.isEmpty) {
+        url = await widget.apiFunction(inputUrl);
+      } else {
+        url = await widget.apiFunction(widget.apiParams, inputUrl);
+      }
+
+      // Ensure that the download URL is valid before incrementing download count
+      if (url == null || url!.isEmpty) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Download failed: Invalid URL'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Now increment the download count since we have a valid URL
+      final status = await widget.activationManager.incrementDownload(widget.userId!);
       if (!status['success']) {
         setState(() {
           isLoading = false;
@@ -78,107 +100,74 @@ class _DownloadWidgetWithTabsState extends State<DownloadWidgetWithTabs>
         return;
       }
 
-      // WebDAVAPI webDAV = WebDAVAPI(
-      //   baseUrl: 'https://stoc-one-api.online/WebDAVRoot',
-      //   username: 'webuser',
-      //   password: 'AlesoDev8\$',
-      // );
-
-      String inputUrl = textEditingController.text.trim();
-
-      // **Dynamically call API function based on parameters**
-      if (widget.apiParams.isEmpty) {
-        url = await widget.apiFunction(inputUrl);
-      } else {
-        url = await widget.apiFunction(widget.apiParams, inputUrl);
-
-      }
-
-
-        // String? downloadUrl = await webDAV.getDownloadLink("confetti-2023-11-27-05-19-34-utc.zip");
-        //
-        // if (downloadUrl != null) {
-        //   print("✅ File is available for download: $downloadUrl");
-        // } else {
-        //   print("❌ Error: File not found or inaccessible.");
-        // }
-
-
       setState(() {
         isLoading = false;
       });
 
-      // Show download options if a valid URL exists
-      if (url != null && url!.isNotEmpty) {
-         widget.activationManager.incrementDownload(widget.userId!);
-        showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          builder: (context) => DownloadOptionsSheet(
-            downloadUrl: url!,
-            onCopyToClipboard: () {
-              Clipboard.setData(ClipboardData(text: url!));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('URL copied to clipboard')),
-              );
-              Navigator.pop(context);
-            },
-            onDirectDownload: () async {
-              final uri = Uri.parse(url!);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
-              }
-              Navigator.pop(context);
-            },
-            onBulkDownload: () {
-              Navigator.pop(context);
-              _showBulkDownloadDialog();
-            },
-          ),
-        );
-      }
+      // Show download options
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (context) => DownloadOptionsSheet(
+          downloadUrl: url!,
+          onCopyToClipboard: () {
+            Clipboard.setData(ClipboardData(text: url!));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('URL copied to clipboard')),
+            );
+            Navigator.pop(context);
+          },
+          onDirectDownload: () async {
+            final uri = Uri.parse(url!);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri);
+            }
+            Navigator.pop(context);
+          },
+        ),
+      );
     } catch (e) {
       setState(() {
         isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('Error: PLease Try again Later >> '),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  void _showBulkDownloadDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bulk Download'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                hintText: 'Enter URLs (one per line)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 5,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Start Bulk Download'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // void _showBulkDownloadDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Bulk Download'),
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           TextField(
+  //             decoration: const InputDecoration(
+  //               hintText: 'Enter URLs (one per line)',
+  //               border: OutlineInputBorder(),
+  //             ),
+  //             maxLines: 5,
+  //           ),
+  //           const SizedBox(height: 16),
+  //           ElevatedButton(
+  //             onPressed: () {
+  //               Navigator.pop(context);
+  //             },
+  //             child: const Text('Start Bulk Download'),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -287,14 +276,14 @@ class DownloadOptionsSheet extends StatelessWidget {
   final String downloadUrl;
   final VoidCallback onCopyToClipboard;
   final VoidCallback onDirectDownload;
-  final VoidCallback onBulkDownload;
+  //final VoidCallback onBulkDownload;
 
   const DownloadOptionsSheet({
     Key? key,
     required this.downloadUrl,
     required this.onCopyToClipboard,
     required this.onDirectDownload,
-    required this.onBulkDownload,
+   // required this.onBulkDownload,
   }) : super(key: key);
 
   @override
@@ -308,7 +297,7 @@ class DownloadOptionsSheet extends StatelessWidget {
           const SizedBox(height: 16),
           ListTile(leading: const Icon(Icons.copy), title: const Text('Copy to Clipboard'), onTap: onCopyToClipboard),
           ListTile(leading: const Icon(Icons.download), title: const Text('Direct Download'), onTap: onDirectDownload),
-          ListTile(leading: const Icon(Icons.file_copy), title: const Text('Download More Files'), onTap: onBulkDownload),
+          //ListTile(leading: const Icon(Icons.file_copy), title: const Text('Download More Files'), onTap: onBulkDownload),
         ],
       ),
     );

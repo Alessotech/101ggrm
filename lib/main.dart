@@ -15,7 +15,7 @@ Future<void> main() async {
 
   runApp( MaterialApp(
 
-    home:LoginPage() ,
+    home:MyApp() ,
   )
 
      );
@@ -68,10 +68,10 @@ class _AuthCheckState extends State<AuthCheck> {
 
     if (user != null) {
       // If the user is logged in, navigate to the home page
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Pages1(),));
     } else {
       // If no user is logged in, navigate to the login page
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage(),));
     }
   }
 

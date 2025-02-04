@@ -83,12 +83,7 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
             color: Colors.white,
             offset: const Offset(-50, -50),
             onSelected: (value) async {
-              if (value == 'edit') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ProfilePage()),
-                );
-              } else if (value == 'logout') {
+            if (value == 'logout') {
                 await FirebaseAuth.instance.signOut();
                 Navigator.pushReplacement(
                   context,
@@ -98,16 +93,6 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
             },
             itemBuilder: (BuildContext context) {
               return [
-                const PopupMenuItem<String>(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, color: Colors.black),
-                      SizedBox(width: 8),
-                      Text('Account Edit'),
-                    ],
-                  ),
-                ),
                 const PopupMenuItem<String>(
                   value: 'logout',
                   child: Row(
