@@ -3,16 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:stoc_one_2/Envato_API/API.dart';
 import 'package:stoc_one_2/Envato_API/powershellAPI.dart';
 import 'package:stoc_one_2/profile_page.dart';
-import 'package:stoc_one_2/widget/activation_Key_widget.dart';
+import 'package:stoc_one_2/widget/activation_Key_widget.dart'; // تأكد من وجود الدالة showKeyActivationWidget هنا
 import 'package:stoc_one_2/widget/download_file_sec.dart';
 import 'package:stoc_one_2/widget/download_info_card.dart';
+import 'package:stoc_one_2/widget/multi_file_page.dart';
 import 'package:stoc_one_2/widget/service_name.dart';
 import 'package:stoc_one_2/widget/service_statues.dart';
 import 'package:stoc_one_2/widget/status_card.dart';
 import 'package:stoc_one_2/widget/subs_info_date.dart';
 import ' ActivationKey/ActivationKeyManager.dart';
-import 'Envato_API/powershellAPI.dart';
-import 'Envato_API/powershellAPI.dart';
 import 'Login.dart';
 
 class Pages1 extends StatefulWidget {
@@ -24,11 +23,14 @@ class Pages1 extends StatefulWidget {
 
 class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final GlobalKey<SubscriptionDownloadCardState> cardKey = GlobalKey();
-  final GlobalKey<SubscriptionDownloadCardState> cardKey2 = GlobalKey();
+
+  final GlobalKey<SubscriptionDownloadCardState> freepikCardKey = GlobalKey();
+  final GlobalKey<SubscriptionDownloadCardState> envatoCardKey = GlobalKey();
+  final GlobalKey<SubscriptionDownloadCardState> freepikDownloadKey = GlobalKey();
+  final GlobalKey<SubscriptionDownloadCardState> envatoDownloadKey = GlobalKey();
+
   String? userId = FirebaseAuth.instance.currentUser?.email;
   final activationManager = ActivationKeyManager();
-  bool IsAlreadyActivated = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -67,13 +69,19 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
     final Size screenSize = MediaQuery.of(context).size;
     final bool isDesktop = screenSize.width > 900;
     final bool isTablet = screenSize.width > 600 && screenSize.width <= 900;
-    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.black,
         actions: [
+          IconButton(
+            icon: Icon(Icons.vpn_key),
+            tooltip: 'Enter your key',
+            onPressed: () {
+              showKeyActivationWidget(context); // زر النافذة المنبثقة
+            },
+          ),
           PopupMenuButton<String>(
             child: Icon(
               Icons.person,
@@ -83,7 +91,7 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
             color: Colors.white,
             offset: const Offset(-50, -50),
             onSelected: (value) async {
-            if (value == 'logout') {
+              if (value == 'logout') {
                 await FirebaseAuth.instance.signOut();
                 Navigator.pushReplacement(
                   context,
@@ -110,7 +118,6 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          // Service Selection
           Container(
             width: double.infinity,
             child: Wrap(
@@ -154,7 +161,6 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
 
           const SizedBox(height: 20),
 
-          // Subscription Status and Downloads
           Expanded(
             child: Focus(
               onFocusChange: (hasFocus) {
@@ -184,10 +190,10 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
                               child: SubscriptionDownloadCard(
                                 activationManager: activationManager,
                                 email: userId!,
-                                key: cardKey,
+                                key: freepikCardKey,
                               ),
                             ),
-                                    SizedBox(width: 20,),
+                            const SizedBox(width: 20),
                             SizedBox(
                               height: 200,
                               width: isDesktop
@@ -202,11 +208,10 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
                             ),
                           ],
                         ),
-
                         DownloadWidgetWithTabs(
                           activationManager: activationManager,
                           userId: userId!,
-                          cardKey: cardKey,
+                          cardKey: freepikDownloadKey,
                           title: "Freepik Downloads",
                           hint: "https://www.freepik.com/premium-photo/trees-growing-forest_133341099.htm",
                           apiFunction: getDownloadLink,
@@ -214,7 +219,6 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
                         ),
                       ],
                     ),
-
                     Column(
                       children: [
                         Row(
@@ -229,10 +233,10 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
                               child: SubscriptionDownloadCard(
                                 activationManager: activationManager,
                                 email: userId!,
-                                key: cardKey,
+                                key: envatoCardKey,
                               ),
                             ),
-                                 SizedBox(width:20),
+                            const SizedBox(width: 20),
                             SizedBox(
                               height: 200,
                               width: isDesktop
@@ -247,15 +251,37 @@ class _Pages1State extends State<Pages1> with SingleTickerProviderStateMixin {
                             ),
                           ],
                         ),
-
+                        const SizedBox(height: 10),
+                        const Text(
+                          'multiple file downloads',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 40,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MultiFileDownloadPage(
+                                  userId: userId,
+                                  activationManager: activationManager,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.file_copy_rounded),
+                        ),
                         DownloadWidgetWithTabs(
                           activationManager: activationManager,
                           userId: userId!,
-                          cardKey: cardKey2,
+                          cardKey: envatoDownloadKey,
                           title: "Envato Downloads",
                           hint: "https://elements.envato.com/bright-white-neon-sound-waves-seamless-motion-radi-ZY5YFHR",
-                          apiFunction:  SimpleHttpRequest.getDownloadUrl,
-                          apiParams: "t4",
+                          apiFunction: StocipDownloader.getDownloadUrl,
+                          apiParams: '',
                         ),
                       ],
                     ),

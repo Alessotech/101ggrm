@@ -1,42 +1,38 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import '../ ActivationKey/ActivationKeyManager.dart';
 
-class KeyActivationWidget extends StatelessWidget {
-  final keyManager = ActivationKeyManager();
-  String? userId = FirebaseAuth.instance.currentUser?.email;
-  final TextEditingController _keyController = TextEditingController();
+final TextEditingController _keyController = TextEditingController();
+final keyManager = ActivationKeyManager();
+final String? userId = FirebaseAuth.instance.currentUser?.email;
 
-  @override
-  Widget build(BuildContext context) {
-    // Get the screen size
-    final Size screenSize = MediaQuery.of(context).size;
-    final bool isDesktop = screenSize.width > 600;
+void showKeyActivationWidget(BuildContext context) {
+  final Size screenSize = MediaQuery.of(context).size;
+  final bool isDesktop = screenSize.width > 600;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate responsive dimensions
-        double containerWidth = isDesktop
-            ? screenSize.width * 0.3  // 30% of screen width for desktop
-            : screenSize.width * 0.9; // 90% of screen width for mobile
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext context) {
+      double containerWidth = isDesktop
+          ? screenSize.width * 0.3
+          : screenSize.width * 0.9;
 
-        double paddingSize = isDesktop ? 30.0 : 20.0;
-        double buttonHeight = isDesktop ? 50.0 : 45.0;
-        double fontSize = isDesktop ? 16.0 : 14.0;
+      double paddingSize = isDesktop ? 30.0 : 20.0;
+      double buttonHeight = isDesktop ? 50.0 : 45.0;
+      double fontSize = isDesktop ? 16.0 : 14.0;
 
-        return Center(
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(20),
+        child: Center(
           child: Container(
             width: containerWidth,
-            constraints: BoxConstraints(
-              maxWidth: 600, // Maximum width to prevent too wide containers
-              minWidth: 280, // Minimum width to ensure usability
+            constraints: const BoxConstraints(
+              maxWidth: 600,
+              minWidth: 280,
             ),
             padding: EdgeInsets.all(paddingSize),
-            margin: EdgeInsets.symmetric(
-              horizontal: screenSize.width * 0.05,
-              vertical: screenSize.height * 0.02,
-            ),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(isDesktop ? 12 : 8),
@@ -74,29 +70,22 @@ class KeyActivationWidget extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () async {
                       if (userId != null) {
-                        bool success = await keyManager.useKey(_keyController.text.trim(), userId!);
-                        print(success);
-                        if(success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Activated Successfully',
-                                style: TextStyle(fontSize: fontSize),
-                              ),
-                              backgroundColor: Colors.green,
+                        bool success = await keyManager.useKey(
+                          _keyController.text.trim(),
+                          userId!,
+                        );
+
+                        Navigator.of(context).pop(); // Close popup
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              success ? 'Activated Successfully' : 'Invalid key',
+                              style: TextStyle(fontSize: fontSize),
                             ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Invalid key',
-                                style: TextStyle(fontSize: fontSize),
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
+                            backgroundColor: success ? Colors.green : Colors.red,
+                          ),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -121,8 +110,8 @@ class KeyActivationWidget extends StatelessWidget {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 }
